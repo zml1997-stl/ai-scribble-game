@@ -30,8 +30,8 @@
             </form>
 
         {% else %}
-            <!-- Mode Selection -->
-            {% if not state.prompt %}
+            <!-- Mode Selection (Home Screen) -->
+            {% if state.phase == 'home' %}
                 <h3>Select Game Mode</h3>
                 <form method="post">
                     <input type="hidden" name="action" value="set_mode">
