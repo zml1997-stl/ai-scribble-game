@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Scribble Adventures</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container mt-4">
+        <h1 class="text-center">AI Scribble Adventures</h1>
+        <p class="text-center">Draw the prompt and describe it!</p>
+
+        <!-- Canvas for Drawing -->
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <canvas id="drawingCanvas" class="border" width="400" height="300"></canvas>
+            </div>
+        </div>
+
+        <!-- Drawing Controls -->
+        <div class="row justify-content-center mt-2">
+            <div class="col-md-8 text-center">
+                <button id="clearCanvas" class="btn btn-secondary">Clear Canvas</button>
+            </div>
+        </div>
+
+        <!-- Description Input -->
+        <div class="row justify-content-center mt-3">
+            <div class="col-md-8">
+                <div class="mb-3">
+                    <label for="description" class="form-label">Your Description:</label>
+                    <textarea id="description" class="form-control" rows="3" placeholder="Describe your drawing..."></textarea>
+                </div>
+                <button id="submitBtn" class="btn btn-primary">Submit</button>
+            </div>
+        </div>
+
+        <!-- Game Feedback -->
+        <div class="row justify-content-center mt-3">
+            <div class="col-md-8">
+                <div id="feedback" class="alert alert-info d-none"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS and Custom JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/script.js"></script>
+</body>
+</html>
