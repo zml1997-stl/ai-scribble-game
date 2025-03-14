@@ -9,6 +9,7 @@
         canvas { border: 2px solid #333; max-width: 100%; }
         .game-container { max-width: 800px; margin: auto; padding: 10px; }
         .btn-small { font-size: 0.9rem; padding: 5px 10px; }
+        .drawing-preview { max-width: 200px; }
     </style>
 </head>
 <body>
@@ -96,7 +97,7 @@
                         <div class="card mb-3">
                             <div class="card-body">
                                 <p>{{ data.description }}</p>
-                                <p>Drawing: <em>(Canvas preview coming soon)</em></p>
+                                <p>Drawing: <img src="{{ drawing_storage[data.drawing_id] }}" class="drawing-preview" alt="Player Drawing"></p>
                                 <form method="post">
                                     <input type="hidden" name="action" value="vote">
                                     <input type="hidden" name="vote_for" value="{{ pid }}">
@@ -119,7 +120,7 @@
                     <div class="card mb-3">
                         <div class="card-body">
                             <p>{{ pid }}: {{ data.description }}</p>
-                            <p>Drawing: <em>(Canvas preview coming soon)</em></p>
+                            <p>Drawing: <img src="{{ drawing_storage[data.drawing_id] }}" class="drawing-preview" alt="Player Drawing"></p>
                             <p>AI Feedback: {{ state.feedback[pid] }}</p>
                             <p>Scores - Effectiveness: {{ data.scores.effectiveness }}, Creativity: {{ data.scores.creativity }}, Votes: {{ data.votes }}</p>
                             <p>Total: {{ data.scores.effectiveness + data.scores.creativity + data.votes }}</p>
