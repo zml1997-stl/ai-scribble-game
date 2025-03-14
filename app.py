@@ -175,6 +175,11 @@ def game():
             logger.debug(f"Mode set to {state['mode']}")
             session.modified = True
 
+    # Force home phase on initial load if no prompt
+    if state['phase'] != 'home' and state['prompt'] is None:
+        state['phase'] = 'home'
+        session.modified = True
+
     session['game_state'] = state
     return render_template('game.html', state=state, player_id=player_id, drawing_storage=DRAWING_STORAGE)
 
