@@ -42,7 +42,10 @@
                         </select>
                     </div>
                     <button type="submit" class="btn btn-success">Set Mode</button>
-                    <button type="submit" name="action" value="start_game" class="btn btn-primary">Start Game</button>
+                </form>
+                <form method="post">
+                    <input type="hidden" name="action" value="start_game">
+                    <button type="submit" class="btn btn-primary mt-2">Start Game</button>
                 </form>
             {% endif %}
 
@@ -133,8 +136,7 @@
 
     <script src="/static/js/draw.js"></script>
     <script>
-        // Basic timer (to be refined in draw.js)
-        let timeLeft = 120; // 2 minutes
+        let timeLeft = 120;
         const timer = setInterval(() => {
             timeLeft--;
             const minutes = Math.floor(timeLeft / 60);
