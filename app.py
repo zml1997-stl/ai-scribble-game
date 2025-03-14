@@ -15,7 +15,7 @@ GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', 'your-gemini-api-key')
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-# Temporary in-memory storage for drawings (replace with DB or filesystem later)
+# Temporary in-memory storage for drawings
 DRAWING_STORAGE = {}
 
 SAMPLE_PROMPTS = [
@@ -39,7 +39,7 @@ def init_game_state():
             'players': {},
             'round': 1,
             'max_rounds': 5,
-            'phase': 'drawing',
+            'phase': 'home',  # Start at home screen
             'start_time': None,
             'power_ups': {'jammer': 1, 'hint': 1, 'double': 1},
             'feedback': {},
@@ -117,12 +117,12 @@ def game():
         elif action == 'submit_solution':
             description = request.form.get('description')
             drawing_data = request.form.get('drawing', 'placeholder')
-            drawing_id = str(uuid.uuid4())  # Generate unique ID for drawing
-            DRAWING_STORAGE[drawing_id] = drawing_data  # Store drawing separately
+            drawing_id = str(uuid.uuid4())
+            DRAWING_STORAGE[drawing_id] = drawing_data
             logger.debug(f"Player {player_id} submitted: {description}, Drawing ID: {drawing_id}")
             state['players'][player_id] = {
                 'description': description,
-                'drawing_id': drawing_id,  # Store ID instead of full data
+                'drawing_id': drawing_id,
                 'scores': None,
                 'votes': 0
             }
@@ -182,7 +182,7 @@ def game():
 def reset():
     session.pop('game_state', None)
     session.pop('player_id', None)
-    DRAWING_STORAGE.clear()  # Clear temporary storage
+    DRAWING_STORAGE.clear()
     logger.debug("Game reset")
     return redirect(url_for('game'))
 
