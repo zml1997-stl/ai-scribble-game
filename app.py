@@ -4,12 +4,16 @@ import os
 import random
 import json
 from datetime import datetime, timedelta
+import logging
 
 app = Flask(__name__)
-app.secret_key = os.getenv('SECRET_KEY', 'your-secret-key-here')  # Set in Heroku config vars
-GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', 'your-gemini-api-key')  # Set in Heroku config vars
+app.secret_key = os.getenv('SECRET_KEY', 'your-secret-key-here')
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', 'your-gemini-api-key')
 
-# Mock data (replace with Gemini API later)
+# Set up logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
 SAMPLE_PROMPTS = [
     "Help a penguin win a race against a cheetah.",
     "Stop a leaky dam with something unexpected.",
@@ -21,34 +25,36 @@ SAMPLE_TWISTS = [
     "A rival appears—make it competitive!"
 ]
 
-# Game state storage (session-based for simplicity; replace with DB/WebSockets for true multiplayer)
 def init_game_state():
     if 'game_state' not in session:
+        logger.debug("Initializing game state")
         session['game_state'] = {
             'prompt': None,
             'twist': None,
-            'mode': 'competitive',  # Default mode
-            'players': {},  # {player_id: {'description': ..., 'drawing': ..., 'scores': ..., 'votes': ...}}
+            'mode': 'competitive',
+            'players': {},
             'round': 1,
             'max_rounds': 5,
-            'phase': 'drawing',  # drawing, voting, results
+            'phase': 'drawing',
             'start_time': None,
-            'power_ups': {'jammer': 0, 'hint': 0, 'double': 0},
+            'power_ups': {'jammer': 1, 'hint': 1, 'double': 1},  # Start with 1 of each for testing
             'feedback': {},
             'leaderboard': {}
         }
     if 'player_id' not in session:
         session['player_id'] = f"player_{random.randint(1000, 9999)}"
+    session.modified = True  # Ensure session updates
 
 def generate_prompt():
     try:
         response = requests.post(
-            'https://api.gemini.ai/v1/generate',  # Hypothetical endpoint
+            'https://api.gemini.ai/v1/generate',
             headers={'Authorization': f'Bearer {GEMINI_API_KEY}'},
             json={'prompt': 'Create a fun, quirky problem-solving scenario for a drawing game.', 'max_length': 50}
         )
         return response.json().get('text', random.choice(SAMPLE_PROMPTS))
-    except Exception:
+    except Exception as e:
+        logger.error(f"Prompt generation failed: {e}")
         return random.choice(SAMPLE_PROMPTS)
 
 def generate_twist():
@@ -87,35 +93,41 @@ def game():
     init_game_state()
     state = session['game_state']
     player_id = session['player_id']
+    logger.debug(f"Current phase: {state['phase']}, Prompt: {state['prompt']}")
 
     if request.method == 'POST':
         action = request.form.get('action')
+        logger.debug(f"POST request received with action: {action}")
+
         if action == 'start_game':
+            logger.debug("Starting game")
             state['prompt'] = generate_prompt()
             state['twist'] = None
             state['phase'] = 'drawing'
             state['start_time'] = datetime.utcnow().isoformat()
             state['players'] = {}
             state['feedback'] = {}
+            session.modified = True
 
         elif action == 'submit_solution':
             description = request.form.get('description')
-            drawing = request.form.get('drawing', 'placeholder')  # Canvas data (to be added later)
+            drawing = request.form.get('drawing', 'placeholder')
+            logger.debug(f"Player {player_id} submitted: {description}")
             state['players'][player_id] = {
                 'description': description,
                 'drawing': drawing,
                 'scores': None,
                 'votes': 0
             }
-            if state['mode'] == 'collaborative' and len(state['players']) == 1:
-                state['phase'] = 'drawing'  # Wait for more players
-            else:
-                state['phase'] = 'voting'
+            state['phase'] = 'voting' if state['mode'] != 'collaborative' or len(state['players']) > 1 else 'drawing'
+            session.modified = True
 
         elif action == 'vote':
             voted_player = request.form.get('vote_for')
             if voted_player and voted_player != player_id:
                 state['players'][voted_player]['votes'] += 1
+                logger.debug(f"{player_id} voted for {voted_player}")
+            session.modified = True
 
         elif action == 'use_power_up':
             power_up = request.form.get('power_up')
@@ -126,7 +138,9 @@ def game():
                 elif power_up == 'double':
                     state['players'][player_id]['double'] = True
                 elif power_up == 'jammer':
-                    state['twist'] = None  # Simplistic jammer effect
+                    state['twist'] = None
+                logger.debug(f"Used power-up: {power_up}")
+            session.modified = True
 
         elif action == 'next_round':
             for p_id, data in state['players'].items():
@@ -144,20 +158,15 @@ def game():
                 state['twist'] = random.random() < 0.3 and generate_twist() or None
                 state['phase'] = 'drawing'
                 state['players'] = {}
+            logger.debug(f"Advancing to round {state['round']}")
+            session.modified = True
 
         elif action == 'set_mode':
             state['mode'] = request.form.get('mode', 'competitive')
             state['round'] = 1
             state['leaderboard'] = {}
-            return redirect(url_for('game'))
-
-    # Timer check for phase transition (simplified)
-    if state['start_time']:
-        elapsed = datetime.utcnow() - datetime.fromisoformat(state['start_time'])
-        if state['phase'] == 'drawing' and elapsed > timedelta(minutes=2):
-            state['phase'] = 'voting'
-        elif state['phase'] == 'voting' and elapsed > timedelta(minutes=4):
-            state['phase'] = 'results'
+            logger.debug(f"Mode set to {state['mode']}")
+            session.modified = True
 
     session['game_state'] = state
     return render_template('game.html', state=state, player_id=player_id)
@@ -166,6 +175,7 @@ def game():
 def reset():
     session.pop('game_state', None)
     session.pop('player_id', None)
+    logger.debug("Game reset")
     return redirect(url_for('game'))
 
 if __name__ == '__main__':
