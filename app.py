@@ -108,6 +108,7 @@ def game():
             state['players'] = {}
             state['feedback'] = {}
             session.modified = True
+            return redirect(url_for('game'))  # Force page refresh to show drawing phase
 
         elif action == 'submit_solution':
             description = request.form.get('description')
