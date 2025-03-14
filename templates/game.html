@@ -17,134 +17,62 @@
         <h1 class="text-center">AI Scribble Adventures</h1>
         <p class="text-center">Player ID: {{ player_id }}</p>
 
-        {% if state.phase == 'results' %}
-            <h2>Game Over!</h2>
-            <h3>Leaderboard</h3>
-            <ul>
-                {% for pid, score in state.leaderboard.items()|sort(attribute='1', reverse=True) %}
-                    <li>{{ pid }}: {{ score }} points</li>
-                {% endfor %}
-            </ul>
-            <form method="post" action="/reset">
-                <button type="submit" class="btn btn-primary">New Game</button>
+        {% if state.phase == 'home' %}
+            <h3>Select Game Mode</h3>
+            <form method="post">
+                <input type="hidden" name="action" value="set_mode">
+                <div class="form-group">
+                    <select name="mode" class="form-control">
+                        <option value="competitive" {% if state.mode == 'competitive' %}selected{% endif %}>Competitive</option>
+                        <option value="collaborative" {% if state.mode == 'collaborative' %}selected{% endif %}>Collaborative</option>
+                        <option value="saboteur" {% if state.mode == 'saboteur' %}selected{% endif %}>Saboteur</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-success">Set Mode</button>
             </form>
+            <form method="post">
+                <input type="hidden" name="action" value="start_game">
+                <button type="submit" class="btn btn-primary mt-2">Start Game</button>
+            </form>
+        {% endif %}
 
-        {% else %}
-            <!-- Mode Selection (Home Screen) -->
-            {% if state.phase == 'home' %}
-                <h3>Select Game Mode</h3>
-                <form method="post">
-                    <input type="hidden" name="action" value="set_mode">
-                    <div class="form-group">
-                        <select name="mode" class="form-control">
-                            <option value="competitive" {% if state.mode == 'competitive' %}selected{% endif %}>Competitive</option>
-                            <option value="collaborative" {% if state.mode == 'collaborative' %}selected{% endif %}>Collaborative</option>
-                            <option value="saboteur" {% if state.mode == 'saboteur' %}selected{% endif %}>Saboteur</option>
-                        </select>
-                    </div>
-                    <button type="submit" class="btn btn-success">Set Mode</button>
-                </form>
-                <form method="post">
-                    <input type="hidden" name="action" value="start_game">
-                    <button type="submit" class="btn btn-primary mt-2">Start Game</button>
-                </form>
+        {% if state.phase == 'drawing' and state.prompt %}
+            <h3>Round {{ state.round }}/{{ state.max_rounds }}</h3>
+            <p><strong>Prompt:</strong> {{ state.prompt }}</p>
+            {% if state.twist %}
+                <p><strong>Twist:</strong> {{ state.twist }}</p>
             {% endif %}
-
-            <!-- Drawing Phase -->
-            {% if state.phase == 'drawing' and state.prompt %}
-                <h3>Round {{ state.round }}/{{ state.max_rounds }}</h3>
-                <p><strong>Prompt:</strong> {{ state.prompt }}</p>
-                {% if state.twist %}
-                    <p><strong>Twist:</strong> {{ state.twist }}</p>
-                {% endif %}
-                <p>Time remaining: <span id="timer">2:00</span></p>
-                <canvas id="drawingCanvas" width="400" height="300"></canvas>
-                <form method="post">
-                    <input type="hidden" name="action" value="submit_solution">
-                    <input type="hidden" name="drawing" id="drawingData">
-                    <div class="form-group">
-                        <label for="description">Describe Your Solution:</label>
-                        <textarea name="description" id="description" class="form-control" rows="3" required></textarea>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Submit</button>
-                </form>
-                <h4>Power-Ups</h4>
-                <form method="post" class="d-inline">
-                    <input type="hidden" name="action" value="use_power_up">
-                    <input type="hidden" name="power_up" value="hint">
-                    <button type="submit" class="btn btn-info btn-small" {% if state.power_ups.hint == 0 %}disabled{% endif %}>Hint ({{ state.power_ups.hint }})</button>
-                </form>
-                <form method="post" class="d-inline">
-                    <input type="hidden" name="action" value="use_power_up">
-                    <input type="hidden" name="power_up" value="double">
-                    <button type="submit" class="btn btn-warning btn-small" {% if state.power_ups.double == 0 %}disabled{% endif %}>Double Draw ({{ state.power_ups.double }})</button>
-                </form>
-                <form method="post" class="d-inline">
-                    <input type="hidden" name="action" value="use_power_up">
-                    <input type="hidden" name="power_up" value="jammer">
-                    <button type="submit" class="btn btn-danger btn-small" {% if state.power_ups.jammer == 0 %}disabled{% endif %}>Jammer ({{ state.power_ups.jammer }})</button>
-                </form>
-                {% if state.feedback[player_id] %}
-                    <p class="mt-2"><strong>Hint:</strong> {{ state.feedback[player_id] }}</p>
-                {% endif %}
-            {% endif %}
-
-            <!-- Voting Phase -->
-            {% if state.phase == 'voting' %}
-                <h3>Vote for Your Favorite!</h3>
-                {% for pid, data in state.players.items() %}
-                    {% if pid != player_id %}
-                        <div class="card mb-3">
-                            <div class="card-body">
-                                <p>{{ data.description }}</p>
-                                <p>Drawing: <img src="{{ drawing_storage[data.drawing_id] }}" class="drawing-preview" alt="Player Drawing"></p>
-                                <form method="post">
-                                    <input type="hidden" name="action" value="vote">
-                                    <input type="hidden" name="vote_for" value="{{ pid }}">
-                                    <button type="submit" class="btn btn-success btn-small">Vote</button>
-                                </form>
-                            </div>
-                        </div>
-                    {% endif %}
-                {% endfor %}
-                <form method="post">
-                    <input type="hidden" name="action" value="next_round">
-                    <button type="submit" class="btn btn-primary">Next Round</button>
-                </form>
-            {% endif %}
-
-            <!-- Results Phase (per round) -->
-            {% if state.phase == 'results' and state.round <= state.max_rounds %}
-                <h3>Round {{ state.round - 1 }} Results</h3>
-                {% for pid, data in state.players.items() %}
-                    <div class="card mb-3">
-                        <div class="card-body">
-                            <p>{{ pid }}: {{ data.description }}</p>
-                            <p>Drawing: <img src="{{ drawing_storage[data.drawing_id] }}" class="drawing-preview" alt="Player Drawing"></p>
-                            <p>AI Feedback: {{ state.feedback[pid] }}</p>
-                            <p>Scores - Effectiveness: {{ data.scores.effectiveness }}, Creativity: {{ data.scores.creativity }}, Votes: {{ data.votes }}</p>
-                            <p>Total: {{ data.scores.effectiveness + data.scores.creativity + data.votes }}</p>
-                        </div>
-                    </div>
-                {% endfor %}
-                <form method="post">
-                    <input type="hidden" name="action" value="next_round">
-                    <button type="submit" class="btn btn-primary">Next Round</button>
-                </form>
+            <p>Time remaining: <span id="timer">2:00</span></p>
+            <canvas id="drawingCanvas" width="400" height="300"></canvas>
+            <form method="post">
+                <input type="hidden" name="action" value="submit_solution">
+                <input type="hidden" name="drawing" id="drawingData">
+                <div class="form-group">
+                    <label for="description">Describe Your Solution:</label>
+                    <textarea name="description" id="description" class="form-control" rows="3" required></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Submit</button>
+            </form>
+            <h4>Power-Ups</h4>
+            <form method="post" class="d-inline">
+                <input type="hidden" name="action" value="use_power_up">
+                <input type="hidden" name="power_up" value="hint">
+                <button type="submit" class="btn btn-info btn-small" {% if state.power_ups.hint == 0 %}disabled{% endif %}>Hint ({{ state.power_ups.hint }})</button>
+            </form>
+            <form method="post" class="d-inline">
+                <input type="hidden" name="action" value="use_power_up">
+                <input type="hidden" name="power_up" value="double">
+                <button type="submit" class="btn btn-warning btn-small" {% if state.power_ups.double == 0 %}disabled{% endif %}>Double Draw ({{ state.power_ups.double }})</button>
+            </form>
+            <form method="post" class="d-inline">
+                <input type="hidden" name="action" value="use_power_up">
+                <input type="hidden" name="power_up" value="jammer">
+                <button type="submit" class="btn btn-danger btn-small" {% if state.power_ups.jammer == 0 %}disabled{% endif %}>Jammer ({{ state.power_ups.jammer }})</button>
+            </form>
+            {% if state.feedback[player_id] %}
+                <p class="mt-2"><strong>Hint:</strong> {{ state.feedback[player_id] }}</p>
             {% endif %}
         {% endif %}
-    </div>
 
-    <script src="/static/js/draw.js"></script>
-    <script>
-        let timeLeft = 120;
-        const timer = setInterval(() => {
-            timeLeft--;
-            const minutes = Math.floor(timeLeft / 60);
-            const seconds = timeLeft % 60;
-            document.getElementById('timer').textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
-            if (timeLeft <= 0) clearInterval(timer);
-        }, 1000);
-    </script>
-</body>
-</html>
+        {% if state.phase == 'voting' %}
+            <h ​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​
