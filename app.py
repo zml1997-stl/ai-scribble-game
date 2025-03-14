@@ -5,6 +5,7 @@ import random
 import json
 from datetime import datetime, timedelta
 import logging
+import uuid
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'your-secret-key-here')
@@ -13,6 +14,9 @@ GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', 'your-gemini-api-key')
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
+
+# Temporary in-memory storage for drawings (replace with DB or filesystem later)
+DRAWING_STORAGE = {}
 
 SAMPLE_PROMPTS = [
     "Help a penguin win a race against a cheetah.",
@@ -37,13 +41,13 @@ def init_game_state():
             'max_rounds': 5,
             'phase': 'drawing',
             'start_time': None,
-            'power_ups': {'jammer': 1, 'hint': 1, 'double': 1},  # Start with 1 of each for testing
+            'power_ups': {'jammer': 1, 'hint': 1, 'double': 1},
             'feedback': {},
             'leaderboard': {}
         }
     if 'player_id' not in session:
         session['player_id'] = f"player_{random.randint(1000, 9999)}"
-    session.modified = True  # Ensure session updates
+    session.modified = True
 
 def generate_prompt():
     try:
@@ -108,15 +112,17 @@ def game():
             state['players'] = {}
             state['feedback'] = {}
             session.modified = True
-            return redirect(url_for('game'))  # Force page refresh to show drawing phase
+            return redirect(url_for('game'))
 
         elif action == 'submit_solution':
             description = request.form.get('description')
-            drawing = request.form.get('drawing', 'placeholder')
-            logger.debug(f"Player {player_id} submitted: {description}")
+            drawing_data = request.form.get('drawing', 'placeholder')
+            drawing_id = str(uuid.uuid4())  # Generate unique ID for drawing
+            DRAWING_STORAGE[drawing_id] = drawing_data  # Store drawing separately
+            logger.debug(f"Player {player_id} submitted: {description}, Drawing ID: {drawing_id}")
             state['players'][player_id] = {
                 'description': description,
-                'drawing': drawing,
+                'drawing_id': drawing_id,  # Store ID instead of full data
                 'scores': None,
                 'votes': 0
             }
@@ -170,12 +176,13 @@ def game():
             session.modified = True
 
     session['game_state'] = state
-    return render_template('game.html', state=state, player_id=player_id)
+    return render_template('game.html', state=state, player_id=player_id, drawing_storage=DRAWING_STORAGE)
 
 @app.route('/reset', methods=['POST'])
 def reset():
     session.pop('game_state', None)
     session.pop('player_id', None)
+    DRAWING_STORAGE.clear()  # Clear temporary storage
     logger.debug("Game reset")
     return redirect(url_for('game'))
 
