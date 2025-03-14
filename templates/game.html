@@ -75,4 +75,71 @@
         {% endif %}
 
         {% if state.phase == 'voting' %}
-            <h ​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​
+            <h3>Vote for Your Favorite!</h3>
+            {% for pid, data in state.players.items() %}
+                {% if pid != player_id %}
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <p>{{ data.description }}</p>
+                            <p>Drawing: <img src="{{ drawing_storage[data.drawing_id] }}" class="drawing-preview" alt="Player Drawing"></p>
+                            <form method="post">
+                                <input type="hidden" name="action" value="vote">
+                                <input type="hidden" name="vote_for" value="{{ pid }}">
+                                <button type="submit" class="btn btn-success btn-small">Vote</button>
+                            </form>
+                        </div>
+                    </div>
+                {% endif %}
+            {% endfor %}
+            <form method="post">
+                <input type="hidden" name="action" value="next_round">
+                <button type="submit" class="btn btn-primary">Next Round</button>
+            </form>
+        {% endif %}
+
+        {% if state.phase == 'results' %}
+            {% if state.round <= state.max_rounds %}
+                <h3>Round {{ state.round - 1 }} Results</h3>
+                {% for pid, data in state.players.items() %}
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <p>{{ pid }}: {{ data.description }}</p>
+                            <p>Drawing: <img src="{{ drawing_storage[data.drawing_id] }}" class="drawing-preview" alt="Player Drawing"></p>
+                            <p>AI Feedback: {{ state.feedback[pid] }}</p>
+                            <p>Scores - Effectiveness: {{ data.scores.effectiveness }}, Creativity: {{ data.scores.creativity }}, Votes: {{ data.votes }}</p>
+                            <p>Total: {{ data.scores.effectiveness + data.scores.creativity + data.votes }}</p>
+                        </div>
+                    </div>
+                {% endfor %}
+                <form method="post">
+                    <input type="hidden" name="action" value="next_round">
+                    <button type="submit" class="btn btn-primary">Next Round</button>
+                </form>
+            {% else %}
+                <h2>Game Over!</h2>
+                <h3>Leaderboard</h3>
+                <ul>
+                    {% for pid, score in state.leaderboard.items()|sort(attribute='1', reverse=True) %}
+                        <li>{{ pid }}: {{ score }} points</li>
+                    {% endfor %}
+                </ul>
+                <form method="post" action="/reset">
+                    <button type="submit" class="btn btn-primary">New Game</button>
+                </form>
+            {% endif %}
+        {% endif %}
+    </div>
+
+    <script src="/static/js/draw.js"></script>
+    <script>
+        let timeLeft = 120;
+        const timer = setInterval(() => {
+            timeLeft--;
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            document.getElementById('timer').textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+            if (timeLeft <= 0) clearInterval(timer);
+        }, 1000);
+    </script>
+</body>
+</html>
